@@ -75,22 +75,15 @@
     }
     
     // 10秒後に接続をキャンセル開始
-    [NSTimer scheduledTimerWithTimeInterval:10.0 target:self selector:@selector(disconnectLastPeripheral:) userInfo:nil repeats:NO];
+    [NSTimer scheduledTimerWithTimeInterval:10.0 target:self selector:@selector(disconnectAllPeripheral:) userInfo:nil repeats:NO];
 }
 
-- (void)disconnectLastPeripheral:(NSTimer *)timer
+- (void)disconnectAllPeripheral:(NSTimer *)timer
 {
-    // コンテナの末尾から接続を解除していく
-    CBPeripheral *lastPeripheral = [_connectingPeripheral lastObject];
-    
-    // ディレイを入れる．連続して接続解除するとXPCがクラッシュする?
-    double delayInSeconds = 2.0;
-    dispatch_time_t popTime = dispatch_time(DISPATCH_TIME_NOW, (int64_t)(delayInSeconds * NSEC_PER_SEC));
-    dispatch_after(popTime, dispatch_get_main_queue(), ^(void){
-        if (lastPeripheral){
-            [_centralManager cancelPeripheralConnection:lastPeripheral];
-        }
-    });
+   
+    for (CBPeripheral *p in _connectingPeripheral) {
+        [_centralManager cancelPeripheralConnection:p];
+    }
     
 }
 
@@ -136,17 +129,11 @@
         // 5秒後にスキャンを再開
         // FIXME:(ここのディレイは何秒必要？)
         NR_LOG(@"すべての_connectingPeripheralとの接続がキャンセルできました．5秒後に接続を再開します");
-        double delayInSeconds = 5.0;
+        double delayInSeconds =5.0;
         dispatch_time_t popTime = dispatch_time(DISPATCH_TIME_NOW, (int64_t)(delayInSeconds * NSEC_PER_SEC));
         dispatch_after(popTime, dispatch_get_main_queue(), ^(void){
             [self startScan];
         });
-    }
-    
-    // コンテナにまだperipheralがあれば．
-    if ([_connectingPeripheral count] > 0 && error == nil){
-        NR_LOG(@"まだ切断されていない_connectingPeripheralが残っています．次のPeripheralを切断します");
-        [self disconnectLastPeripheral:nil];
     }
 }
 
